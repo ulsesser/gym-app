@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+ <head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>Mi Gimnasio</title>
+</head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Membresía</title>
+</head>
+<body>
+    <h2>Registro de Membresía</h2>
+    <form id="memberForm">
+        <input type="text" id="memberNumber" placeholder="Número de miembro" required><br>
+        <input type="text" id="fullName" placeholder="Nombre completo" required><br>
+        <input type="date" id="paymentDate" required><br>
+        <input type="date" id="expirationDate" required><br>
+        <button type="submit">Registrar</button>
+    </form>
+     <h2>Consultar Socio por Número de Miembro</h2>
+    <input type="text" id="searchMemberNumber" placeholder="Buscar por número de miembro">
+    <button onclick="searchMember()">Buscar</button>
+
+    <div id="memberDetails"></div>
+
+    <h2>Miembros Registrados</h2>
+    <ul id="memberList"></ul>
+
+    <button onclick="window.location.href='products.html'">Ver Productos</button>
+
+
+    <script>
+        // Agregar nuevo miembro
+        document.getElementById('memberForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const member = {
+                memberNumber: document.getElementById('memberNumber').value,
+                fullName: document.getElementById('fullName').value,
+                paymentDate: document.getElementById('paymentDate').value,
+                expirationDate: document.getElementById('expirationDate').value
+            };
+
+            const response = await fetch('http://localhost:3000/add-member', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(member)
+            });
+
+            if (response.ok) {
+                alert("Membresía registrada");
+                loadMembers();
+            }
+        });
+
+        // Cargar miembros desde la base de datos
+        async function loadMembers() {
+            const response = await fetch('http://localhost:3000/members');
+            const members = await response.json();
+            const list = document.getElementById('memberList');
+            list.innerHTML = "";
+            members.forEach(member => {
+                const li = document.createElement('li');
+                li.textContent = `${member.fullName} - Expira: ${new Date(member.expirationDate).toLocaleDateString()}`;
+
+                // Botón de editar
+                const editButton = document.createElement('button');
+                editButton.textContent = "Editar";
+                editButton.onclick = function() { editMember(member._id) };
+
+                // Botón de eliminar
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = "Eliminar";
+                deleteButton.onclick = function() { deleteMember(member._id) };
+
+                li.appendChild(editButton);
+                li.appendChild(deleteButton);
+                list.appendChild(li);
+            });
+        }
+
+        // Función para editar miembro
+        async function editMember(id) {
+            const newName = prompt("Nuevo nombre completo:");
+            if (!newName) return;
+            const newExpirationDate = prompt("Nueva fecha de expiración (AAAA-MM-DD):");
+            if (!newExpirationDate) return;
+
+            const updatedMember = {
+                fullName: newName,
+                expirationDate: newExpirationDate
+            };
+
+            const response = await fetch(`http://localhost:3000/edit-member/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedMember)
+            });
+
+            if (response.ok) {
+                alert("Membresía actualizada");
+                loadMembers();
+            }
+        }
+
+        // Función para eliminar miembro
+        async function deleteMember(id) {
+            const confirmDelete = confirm("¿Estás seguro de que quieres eliminar a este miembro?");
+            if (!confirmDelete) return;
+
+            const response = await fetch(`http://localhost:3000/delete-member/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert("Miembro eliminado");
+                loadMembers();
+            }
+        }
+
+// Función para buscar miembro por número de miembro
+async function searchMember() {
+    const memberNumber = document.getElementById('searchMemberNumber').value.trim();
+
+    if (!memberNumber) {
+        alert("Por favor ingresa un número de miembro.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`http://localhost:3000/member/${memberNumber}`);
+        if (response.ok) {
+            const member = await response.json();
+            displayMemberDetails(member);
+        } else {
+            document.getElementById('memberDetails').innerHTML = "Miembro no encontrado.";
+        }
+    } catch (error) {
+        console.error('Error al buscar el miembro:', error);
+        alert("Hubo un error al buscar el miembro.");
+    }
+}
+ 
+       // Mostrar los detalles del miembro
+        function displayMemberDetails(member) {
+            const detailsDiv = document.getElementById('memberDetails');
+            detailsDiv.innerHTML = `
+                <h3>Detalles del Miembro:</h3>
+                <p><strong>Número de Miembro:</strong> ${member.memberNumber}</p>
+                <p><strong>Nombre Completo:</strong> ${member.fullName}</p>
+                <p><strong>Fecha de Pago:</strong> ${new Date(member.paymentDate).toLocaleDateString()}</p>
+                <p><strong>Fecha de Expiración:</strong> ${new Date(member.expirationDate).toLocaleDateString()}</p>
+            `;
+        }
+
+        loadMembers();
+
+    </script>
+</body>
+</html>

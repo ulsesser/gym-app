@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos</title>
+</head>
+<body>
+    <h2>Agregar Producto</h2>
+    <form id="productForm">
+        <input type="text" id="productId" placeholder="ID del Producto" required><br>
+        <input type="text" id="productName" placeholder="Nombre del Producto" required><br>
+        <input type="number" id="stockQuantity" placeholder="Cantidad en stock" required><br>
+        <input type="number" id="price" placeholder="Precio" required><br>
+        <button type="submit">Agregar Producto</button>
+    </form>
+
+    <h2>Consultar Productos</h2>
+    <div id="productList"></div>
+
+    <!-- Botón para regresar a la página principal -->
+    <button onclick="window.location.href='index.html'">Regresar</button>
+
+    <script>
+        // Agregar nuevo producto
+        document.getElementById('productForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const product = {
+                productId: document.getElementById('productId').value,
+                name: document.getElementById('productName').value,
+                stockQuantity: parseInt(document.getElementById('stockQuantity').value),
+                price: parseFloat(document.getElementById('price').value)
+            };
+
+            const response = await fetch('http://localhost:3000/add-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(product)
+            });
+
+            if (response.ok) {
+                alert("Producto agregado");
+                loadProducts();
+            }
+        });
+
+        // Cargar productos desde la base de datos
+        async function loadProducts() {
+            const response = await fetch('http://localhost:3000/products');
+            const products = await response.json();
+            const list = document.getElementById('productList');
+            list.innerHTML = "";
+
+            products.forEach(product => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <p><strong>${product.name}</strong> - ID: ${product.productId} - Stock: ${product.stockQuantity} - Vendidos: ${product.soldQuantity} - Precio: $${product.price}</p>
+                    <button onclick="sellProduct('${product._id}')">Vender Producto</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // Vender un producto
+        async function sellProduct(id) {
+            const quantity = prompt("¿Cuántos productos deseas vender?");
+            if (!quantity || isNaN(quantity) || quantity <= 0) {
+                alert("Cantidad inválida.");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:3000/sell-product/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantitySold: parseInt(quantity) })
+            });
+
+            if (response.ok) {
+                alert("Producto vendido");
+                loadProducts();
+            } else {
+                alert("Error al vender el producto.");
+            }
+        }
+
+        loadProducts();
+
+     // Eliminar un producto
+        async function deleteProduct(id) {
+            const confirmDelete = confirm("¿Estás seguro de que quieres eliminar este producto?");
+            if (!confirmDelete) return;
+
+            const response = await fetch(`http://localhost:3000/delete-product/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert("Producto eliminado");
+                loadProducts();
+            } else {
+                alert("Error al eliminar el producto.");
+            }
+        }
+
+        loadProducts();
+    </script>
+</body>
+</html>
